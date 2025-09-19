@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.security.InvalidKeyException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -135,11 +136,15 @@ public class ITunesBackupDecryptor {
     System.out
         .println("  java -jar itunes-backup-decryptor.jar -b /path/to/backup -o /path/to/output -p mypassword -v");
     System.out.println();
-    System.out.println("The tool will create the output directory structure matching the original backup:");
+    System.out.println("The tool preserves the original backup directory structure with decrypted files:");
     System.out.println("  output/");
-    System.out.println("    ├── AppDomain-com.apple.MobileSMS/");
-    System.out.println("    ├── CameraRollDomain/");
-    System.out.println("    ├── HomeDomain/");
+    System.out.println("    ├── Manifest.db       (database with file mappings)");
+    System.out.println("    ├── Manifest.plist    (backup metadata)");
+    System.out.println("    ├── Info.plist        (device information)");
+    System.out.println("    ├── ab/");
+    System.out.println("    │   ├── ab123456...    (decrypted files)");
+    System.out.println("    ├── cd/");
+    System.out.println("    │   └── cd789abc...    (decrypted files)");
     System.out.println("    └── ...");
   }
 
@@ -198,8 +203,12 @@ public class ITunesBackupDecryptor {
 
     log("Found " + allFiles.size() + " files to process");
     log("Starting decryption process...");
+    log("Output structure will preserve original backup format with decrypted files");
 
     long startTime = System.currentTimeMillis();
+
+    // Copy manifest files to preserve backup structure
+    copyManifestFiles(backup, outputDir);
 
     // Process all files
     for (BackupFile file : allFiles) {
@@ -224,6 +233,7 @@ public class ITunesBackupDecryptor {
     log("Total data processed: " + formatBytes(totalBytes.get()));
     log("Time taken: " + formatDuration(duration));
     log("Output directory: " + outputPath);
+    log("Structure: Preserved original backup format with decrypted files");
 
     if (errorFiles.get() > 0) {
       log("Warning: " + errorFiles.get() + " files had errors during processing");
@@ -237,36 +247,66 @@ public class ITunesBackupDecryptor {
         return;
       }
 
-      // Create output path: output/domain/relativePath
-      Path filePath = outputDir.resolve(file.domain).resolve(file.relativePath);
+      // Create output path preserving backup structure: output/ab/ab123456789...
+      String fileIdPrefix = file.fileID.substring(0, 2);
+      Path filePath = outputDir.resolve(fileIdPrefix).resolve(file.fileID);
 
       // Skip if file already exists and not forcing
       if (Files.exists(filePath) && !force) {
         skippedFiles.incrementAndGet();
-        logVerbose("Skipped (exists): " + file.domain + "/" + file.relativePath);
+        logVerbose("Skipped (exists): " + fileIdPrefix + "/" + file.fileID + " (" + file.domain + "/"
+            + file.relativePath + ")");
         return;
       }
 
-      // Create parent directories
+      // Create parent directories (e.g., ab/, cd/, etc.)
       Files.createDirectories(filePath.getParent());
 
-      // Extract the file
+      // Extract the file (decrypt if needed)
       file.extract(filePath.toFile());
 
       processedFiles.incrementAndGet();
       totalBytes.addAndGet(file.getSize());
 
-      logVerbose("Extracted: " + file.domain + "/" + file.relativePath +
-          " (" + formatBytes(file.getSize()) +
+      logVerbose("Extracted: " + fileIdPrefix + "/" + file.fileID + " (" + file.domain + "/" + file.relativePath +
+          ", " + formatBytes(file.getSize()) +
           (file.isEncrypted() ? ", encrypted" : "") + ")");
 
     } catch (Exception e) {
       errorFiles.incrementAndGet();
-      String errorMsg = "Error processing " + file.domain + "/" + file.relativePath + ": " + e.getMessage();
+      String errorMsg = "Error processing " + file.fileID + " (" + file.domain + "/" + file.relativePath + "): "
+          + e.getMessage();
       log("ERROR: " + errorMsg);
       if (verbose) {
         logger.error("Full error details:", e);
       }
+    }
+  }
+
+  private void copyManifestFiles(ITunesBackup backup, Path outputDir) {
+    try {
+      // Copy Manifest.plist
+      Path manifestPlistSrc = backup.manifestPListFile.toPath();
+      Path manifestPlistDest = outputDir.resolve("Manifest.plist");
+      Files.copy(manifestPlistSrc, manifestPlistDest, StandardCopyOption.REPLACE_EXISTING);
+      log("Copied: Manifest.plist");
+
+      // Copy Manifest.db (use decrypted version if available, otherwise original)
+      File manifestDbSrc = backup.decryptedDatabaseFile != null ? backup.decryptedDatabaseFile : backup.manifestDBFile;
+      Path manifestDbDest = outputDir.resolve("Manifest.db");
+      Files.copy(manifestDbSrc.toPath(), manifestDbDest, StandardCopyOption.REPLACE_EXISTING);
+      log("Copied: Manifest.db" + (backup.decryptedDatabaseFile != null ? " (decrypted)" : ""));
+
+      // Copy Info.plist if it exists
+      if (backup.backupInfoFile.exists()) {
+        Path infoPlistSrc = backup.backupInfoFile.toPath();
+        Path infoPlistDest = outputDir.resolve("Info.plist");
+        Files.copy(infoPlistSrc, infoPlistDest, StandardCopyOption.REPLACE_EXISTING);
+        log("Copied: Info.plist");
+      }
+
+    } catch (IOException e) {
+      log("Warning: Failed to copy manifest files: " + e.getMessage());
     }
   }
 

@@ -65,25 +65,29 @@ java -jar itunes-backup-decryptor.jar -b /path/to/backup -o ./output -p "1234"
 
 ## Output Structure
 
-The tool maintains the original backup structure:
+The tool preserves the original iTunes backup directory structure with decrypted files:
 
 ```
 output/
-├── AppDomain-com.apple.MobileSMS/
-│   └── Documents/
-│       └── sms.db
-├── CameraRollDomain/
-│   └── Media/
-│       └── DCIM/
-│           └── 100APPLE/
-│               └── IMG_0001.HEIC
-├── HomeDomain/
-│   └── Library/
-│       └── Preferences/
-└── MediaDomain/
-    └── Library/
-        └── SMS/
+├── Manifest.db          # Database containing file mappings (copied/decrypted)
+├── Manifest.plist       # Backup metadata (copied)
+├── Info.plist           # Device information (copied)
+├── ab/
+│   ├── ab123456789...   # Decrypted files (original filename preserved)
+│   └── ab987654321...   # Each file decrypted in place
+├── cd/
+│   ├── cd123456789...   # Same structure as original backup
+│   └── cd987654321...   # but with decrypted content
+├── ef/
+│   └── ef123456789...
+└── ...                  # All subdirectories (00-ff) as needed
 ```
+
+**Benefits:**
+- **Exact structure preservation** - tools expecting this format will work
+- **File relationship maintained** - Manifest.db still references correct paths
+- **Easy analysis** - same directory layout as original backup
+- **Tool compatibility** - other backup analysis tools can work with this structure
 
 ## Finding iTunes Backups
 
