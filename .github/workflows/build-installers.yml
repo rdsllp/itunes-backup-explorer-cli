@@ -1,0 +1,161 @@
+name: Build platform-specific installers
+
+on:
+  push:
+    tags:
+      - v*.*
+
+jobs:
+  build-windows-installer:
+    name: Build installer for Windows
+    runs-on: windows-latest
+    steps:
+      - id: checkout-code
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: setup-jdk
+        name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '23'
+          cache: 'maven'
+      - id: build
+        name: Build
+        run: mvn --batch-mode package --file pom.xml
+      - id: add-platform-suffix
+        name: Add platform file name suffix
+        shell: pwsh
+        run: |
+          Get-ChildItem target/installer | Rename-Item -NewName { "$($_.BaseName -Replace ' ','_')_win_x64$($_.Extension)" }
+      - id: upload-installer
+        name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./target/installer/*.msi
+          name: installer-windows
+          if-no-files-found: error
+          retention-days: 7
+
+  build-linux-installer:
+    name: Build installer for Linux
+    runs-on: ubuntu-latest
+    steps:
+      - id: checkout-code
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: setup-jdk
+        name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '23'
+          cache: 'maven'
+      - id: build
+        name: Build
+        run: mvn --batch-mode package --file pom.xml
+      - id: add-platform-suffix
+        name: Add platform file name suffix
+        shell: bash
+        run: |
+          for file in target/installer/*.deb; do
+            mv "$file" "${file//_amd64/_debian_x64}"
+          done
+      - id: upload-installer
+        name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./target/installer/*
+          name: installer-linux
+          if-no-files-found: error
+          retention-days: 7
+
+  build-mac-arm-installer:
+    name: Build installer for ARM64 macOS
+    runs-on: macos-latest
+    steps:
+      - id: checkout-code
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: setup-jdk
+        name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '23'
+          cache: 'maven'
+      - id: build
+        name: Build
+        run: mvn --batch-mode package --file pom.xml
+      - id: add-arch-suffix
+        name: Add architecture file name suffix
+        shell: bash
+        run: |
+          for file in target/installer/*.dmg; do
+            before_ext="${file%.*}"
+            replaced_spaces="${before_ext// /_}"
+            mv "$file" "${replaced_spaces}_mac_arm64.dmg"
+          done
+      - id: upload-installer
+        name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./target/installer/*.dmg
+          name: installer-macos-arm64
+          if-no-files-found: error
+          retention-days: 7
+
+  build-mac-x64-installer:
+    name: Build installer for x64 macOS
+    runs-on: macos-13
+    steps:
+      - id: checkout-code
+        name: Checkout code
+        uses: actions/checkout@v4
+      - id: setup-jdk
+        name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '23'
+          cache: 'maven'
+      - id: build
+        name: Build
+        run: mvn --batch-mode package --file pom.xml
+      - id: add-arch-suffix
+        name: Add architecture file name suffix
+        shell: bash
+        run: |
+          for file in target/installer/*.dmg; do
+            before_ext="${file%.*}"
+            replaced_spaces="${before_ext// /_}"
+            mv "$file" "${replaced_spaces}_mac_x64.dmg"
+          done
+      - id: upload-installer
+        name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          path: ./target/installer/*
+          name: installer-macos-x64
+          if-no-files-found: error
+          retention-days: 7
+
+  draft-release:
+    name: Draft a new release
+    runs-on: ubuntu-latest
+    needs: [build-windows-installer, build-linux-installer, build-mac-arm-installer, build-mac-x64-installer]
+    steps:
+      - id: download-artifacts
+        name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: installers
+          pattern: installer-*
+          merge-multiple: true
+      - id: create-release
+        name: Create GitHub release draft
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: installers/*
