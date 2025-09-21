@@ -1,7 +1,7 @@
-package me.maxih.itunes_backup_explorer.api;
+package hearsay.idevice_decryption.api;
 
 import com.dd.plist.NSData;
-import me.maxih.itunes_backup_explorer.util.BackupFilePaddingFixer;
+import hearsay.idevice_decryption.util.BackupFilePaddingFixer;
 import org.bouncycastle.crypto.digests.SHA1Digest;
 import org.bouncycastle.crypto.generators.PKCS5S2ParametersGenerator;
 import org.bouncycastle.crypto.params.KeyParameter;

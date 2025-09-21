@@ -1,8 +1,8 @@
-package me.maxih.itunes_backup_explorer.api;
+package hearsay.idevice_decryption.api;
 
 import com.dd.plist.*;
-import me.maxih.itunes_backup_explorer.util.BackupPathUtils;
-import me.maxih.itunes_backup_explorer.util.UtilDict;
+import hearsay.idevice_decryption.util.BackupPathUtils;
+import hearsay.idevice_decryption.util.UtilDict;
 
 import java.io.*;
 import java.nio.ByteBuffer;

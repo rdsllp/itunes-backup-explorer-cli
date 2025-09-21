@@ -1,4 +1,4 @@
-package me.maxih.itunes_backup_explorer.api;
+package hearsay.idevice_decryption.api;
 
 public class NotUnlockedException extends Exception {
 

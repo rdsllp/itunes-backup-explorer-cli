@@ -10,8 +10,8 @@ REM JAVA_RELEASE (e.g. 23)
 
 SET APP_NAME=iTunes Backup Explorer
 SET MAIN_JAR=itunes-backup-explorer-%PROJECT_VERSION%.jar
-SET MAIN_MODULE=me.maxih.itunes_backup_explorer
-SET MAIN_CLASS=me.maxih.itunes_backup_explorer.ITunesBackupExplorerLauncher
+SET MAIN_MODULE=hearsay.idevice_decryption
+SET MAIN_CLASS=hearsay.idevice_decryption.ITunesBackupDecryptor
 
 SET MANUAL_MODULES=jdk.crypto.ec,jdk.localedata,org.slf4j,org.slf4j.simple,org.xerial.sqlitejdbc,%MAIN_MODULE%
 
@@ -59,7 +59,7 @@ CALL "%JAVA_HOME%\bin\jpackage" ^
     --app-version "%APP_VERSION%" ^
     --copyright "Copyright © 2025 Maximilian Herczegh" ^
     --vendor "Maximilian Herczegh" ^
-    --icon "src\main\resources\me\maxih\itunes_backup_explorer\icon.ico" ^
+    --icon "src\main\resources\hearsay\idevice_decryption\icon.ico" ^
     --runtime-image "target\runtime-image" ^
     --module "%MAIN_MODULE%/%MAIN_CLASS%"
 
@@ -70,7 +70,7 @@ CALL "%JAVA_HOME%\bin\jpackage" ^
     --app-version "%APP_VERSION%" ^
     --copyright "Copyright © 2025 Maximilian Herczegh" ^
     --vendor "Maximilian Herczegh" ^
-    --icon "src\main\resources\me\maxih\itunes_backup_explorer\icon.ico" ^
+    --icon "src\main\resources\hearsay\idevice_decryption\icon.ico" ^
     --app-image "target\app-image\%APP_NAME%" ^
     --win-dir-chooser ^
     --win-per-user-install ^

@@ -10,8 +10,8 @@
 
 APP_NAME="itunes-backup-explorer"
 MAIN_JAR="itunes-backup-explorer-$PROJECT_VERSION.jar"
-MAIN_MODULE="me.maxih.itunes_backup_explorer"
-MAIN_CLASS="me.maxih.itunes_backup_explorer.ITunesBackupExplorerLauncher"
+MAIN_MODULE="hearsay.idevice_decryption"
+MAIN_CLASS="hearsay.idevice_decryption.ITunesBackupDecryptor"
 
 MANUAL_MODULES="jdk.crypto.ec,jdk.localedata,org.slf4j,org.slf4j.simple,org.xerial.sqlitejdbc,$MAIN_MODULE"
 
@@ -54,7 +54,7 @@ echo Packaging...
   --app-version "$APP_VERSION" \
   --copyright "Copyright © 2025 Maximilian Herczegh" \
   --vendor "Maximilian Herczegh" \
-  --icon "src/main/resources/me/maxih/itunes_backup_explorer/icon.png" \
+  --icon "src/main/resources/hearsay/idevice_decryption/icon.png" \
   --runtime-image "target/runtime-image" \
   --module "$MAIN_MODULE/$MAIN_CLASS"
 
@@ -64,7 +64,7 @@ echo Packaging...
     --app-version "$APP_VERSION" \
     --copyright "Copyright © 2025 Maximilian Herczegh" \
     --vendor "Maximilian Herczegh" \
-    --icon "src/main/resources/me/maxih/itunes_backup_explorer/icon.png" \
+    --icon "src/main/resources/hearsay/idevice_decryption/icon.png" \
     --app-image "target/app-image/$APP_NAME" \
     --linux-menu-group "Utility;Archiving;" \
     --linux-shortcut \

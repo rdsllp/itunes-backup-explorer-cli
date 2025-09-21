@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>me.maxih</groupId>
-  <artifactId>itunes-backup-explorer</artifactId>
+  <groupId>hearsay</groupId>
+  <artifactId>idevice-decryption</artifactId>
   <version>1.7-SNAPSHOT</version>
   <properties>
     <app.version>1.7</app.version>
@@ -176,7 +176,7 @@
             </executions>
             <configuration>
               <imageName>itunes-backup-decryptor</imageName>
-              <mainClass>me.maxih.itunes_backup_explorer.ITunesBackupDecryptor</mainClass>
+              <mainClass>hearsay.idevice_decryption.ITunesBackupDecryptor</mainClass>
               <buildArgs>
                 <buildArg>--no-fallback</buildArg>
                 <buildArg>--report-unsupported-elements-at-runtime</buildArg>
@@ -220,7 +220,7 @@
                 <argument>--module-path</argument>
                 <modulepath />
                 <argument>--module</argument>
-                <argument>me.maxih.itunes_backup_explorer/me.maxih.itunes_backup_explorer.ITunesBackupDecryptor</argument>
+                <argument>hearsay.idevice_decryption/hearsay.idevice_decryption.ITunesBackupDecryptor</argument>
               </arguments>
             </configuration>
           </execution>
@@ -263,7 +263,7 @@
               </descriptorRefs>
               <archive>
                 <manifest>
-                  <mainClass>me.maxih.itunes_backup_explorer.ITunesBackupDecryptor</mainClass>
+                  <mainClass>hearsay.idevice_decryption.ITunesBackupDecryptor</mainClass>
                 </manifest>
               </archive>
             </configuration>

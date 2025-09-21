@@ -10,8 +10,8 @@
 
 APP_NAME="iTunes Backup Explorer"
 MAIN_JAR="itunes-backup-explorer-$PROJECT_VERSION.jar"
-MAIN_MODULE="me.maxih.itunes_backup_explorer"
-MAIN_CLASS="me.maxih.itunes_backup_explorer.ITunesBackupExplorerLauncher"
+MAIN_MODULE="hearsay.idevice_decryption"
+MAIN_CLASS="hearsay.idevice_decryption.ITunesBackupDecryptor"
 
 MANUAL_MODULES="jdk.crypto.ec,jdk.localedata,org.slf4j,org.slf4j.simple,org.xerial.sqlitejdbc,$MAIN_MODULE"
 
@@ -54,7 +54,7 @@ echo Packaging...
   --app-version "$APP_VERSION" \
   --copyright "Copyright © 2025 Maximilian Herczegh" \
   --vendor "Maximilian Herczegh" \
-  --icon "src/main/resources/me/maxih/itunes_backup_explorer/icon.icns" \
+  --icon "src/main/resources/hearsay/idevice_decryption/icon.icns" \
   --runtime-image "target/runtime-image" \
   --module "$MAIN_MODULE/$MAIN_CLASS"
 
@@ -64,8 +64,8 @@ echo Packaging...
     --app-version "$APP_VERSION" \
     --copyright "Copyright © 2025 Maximilian Herczegh" \
     --vendor "Maximilian Herczegh" \
-    --icon "src/main/resources/me/maxih/itunes_backup_explorer/icon.icns" \
+    --icon "src/main/resources/hearsay/idevice_decryption/icon.icns" \
     --app-image "target/app-image/$APP_NAME.app" \
-    --mac-package-identifier "maxih.itunes-backup-explorer" \
+    --mac-package-identifier "hearsay.idevice-decryption" \
     --mac-package-name "Backup Explorer" \
     --mac-app-category "utilities"

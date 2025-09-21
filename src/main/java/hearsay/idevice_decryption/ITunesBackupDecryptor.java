@@ -1,6 +1,6 @@
-package me.maxih.itunes_backup_explorer;
+package hearsay.idevice_decryption;
 
-import me.maxih.itunes_backup_explorer.api.*;
+import hearsay.idevice_decryption.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

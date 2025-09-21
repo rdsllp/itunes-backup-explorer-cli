@@ -1,9 +1,9 @@
-package me.maxih.itunes_backup_explorer.api;
+package hearsay.idevice_decryption.api;
 
 import com.dd.plist.NSData;
 import com.dd.plist.NSDictionary;
 import com.dd.plist.NSString;
-import me.maxih.itunes_backup_explorer.util.UtilDict;
+import hearsay.idevice_decryption.util.UtilDict;
 
 import java.util.Date;
 import java.util.HashMap;

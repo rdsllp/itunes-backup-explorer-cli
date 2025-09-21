@@ -1,4 +1,4 @@
-package me.maxih.itunes_backup_explorer.util;
+package hearsay.idevice_decryption.util;
 
 import java.io.File;
 import java.io.IOException;

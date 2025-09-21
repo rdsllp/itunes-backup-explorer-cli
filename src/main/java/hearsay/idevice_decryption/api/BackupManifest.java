@@ -1,7 +1,7 @@
-package me.maxih.itunes_backup_explorer.api;
+package hearsay.idevice_decryption.api;
 
 import com.dd.plist.NSDictionary;
-import me.maxih.itunes_backup_explorer.util.UtilDict;
+import hearsay.idevice_decryption.util.UtilDict;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

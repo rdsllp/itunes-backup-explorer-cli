@@ -1,4 +1,4 @@
-module me.maxih.itunes_backup_explorer {
+module hearsay.idevice_decryption {
   requires dd.plist;
   requires org.bouncycastle.provider;
   requires java.sql;
@@ -6,7 +6,7 @@ module me.maxih.itunes_backup_explorer {
   requires org.slf4j;
   requires org.slf4j.simple;
 
-  exports me.maxih.itunes_backup_explorer;
-  exports me.maxih.itunes_backup_explorer.api;
-  exports me.maxih.itunes_backup_explorer.util;
+  exports hearsay.idevice_decryption;
+  exports hearsay.idevice_decryption.api;
+  exports hearsay.idevice_decryption.util;
 }
