@@ -7,6 +7,7 @@ A command-line tool for decrypting iTunes/Finder backup files from iPhone and iP
 - **Decrypt encrypted iTunes backups** using your backup password
 - **Extract files** to a separate directory preserving backup structure
 - **In-place decryption** to replace encrypted files directly in the backup directory
+- **File logging** with timestamped entries for automation and debugging
 - **Cross-platform** support for macOS, Windows, and Linux
 - **Native executables** for optimal performance
 
@@ -16,12 +17,26 @@ A command-line tool for decrypting iTunes/Finder backup files from iPhone and iP
 ```bash
 java -jar idevice-decryption.jar -b /path/to/backup -o /path/to/output
 java -jar idevice-decryption.jar -b /path/to/backup -o /path/to/output -p password -v
+java -jar idevice-decryption.jar -b /path/to/backup -o /path/to/output -l /path/to/logfile.log
 ```
 
 ### Replace encrypted files in-place (modifies original backup):
 ```bash
 java -jar idevice-decryption.jar -b /path/to/backup -r
 java -jar idevice-decryption.jar -b /path/to/backup -r -p password -v
+java -jar idevice-decryption.jar -b /path/to/backup -r -l /path/to/logfile.log -v
+```
+
+### File logging (for automation and debugging):
+```bash
+# Console + file logging
+java -jar idevice-decryption.jar -b /path/to/backup -o /path/to/output -l /path/to/logfile.log
+
+# Verbose console + complete file logging
+java -jar idevice-decryption.jar -b /path/to/backup -r -l /path/to/logfile.log -v
+
+# Silent console with file logging only (for automation)
+java -jar idevice-decryption.jar -b /path/to/backup -o /path/to/output -l /path/to/logfile.log 2>/dev/null
 ```
 
 ### Command Options:
@@ -29,11 +44,52 @@ java -jar idevice-decryption.jar -b /path/to/backup -r -p password -v
 - `-o, --output PATH` - Output directory for decrypted files
 - `-r, --replace` - Replace encrypted files in-place with decrypted versions
 - `-p, --password PASS` - Backup password (will prompt if not provided)
+- `-l, --log PATH` - Write logs to specified file (overwrites if exists)
 - `-v, --verbose` - Enable verbose output
 - `-f, --force` - Overwrite existing files or skip confirmation
 - `-h, --help` - Show help message
 
 **Note:** Either `--output` or `--replace` is required, but not both.
+
+### Log File Format
+
+When using the `-l/--log` option, log entries are written with timestamps in the following format:
+
+```
+[2025-09-21 14:13:11] INFO: Starting iTunes backup decryption...
+[2025-09-21 14:13:11] INFO: Backup path: /path/to/backup
+[2025-09-21 14:13:11] INFO: Mode: Extract to output directory
+[2025-09-21 14:13:12] VERBOSE: Decrypting to temp file: /tmp/abc123.tmp
+[2025-09-21 14:13:12] ERROR: Content file not found for file123
+```
+
+**Log Levels:**
+- `INFO` - General operation messages (always logged)
+- `VERBOSE` - Detailed progress information (always logged to file, console only with `-v`)
+- `ERROR` - Error messages and warnings
+
+### Node.js Integration
+
+Perfect for automation with Node.js `spawn()`:
+
+```javascript
+const { spawn } = require('child_process');
+
+const process = spawn('java', [
+  '-jar', 'idevice-decryption.jar',
+  '-b', '/path/to/backup',
+  '-r',
+  '-l', '/path/to/logfile.log',
+  '-p', 'backup_password'
+]);
+
+// Real-time console output
+process.stdout.on('data', (data) => {
+  console.log(`stdout: ${data}`);
+});
+
+// Complete logs available in /path/to/logfile.log
+```
 
 ## Building
 
@@ -121,6 +177,7 @@ mvn exec:exec
 ### Run with custom arguments:
 ```bash
 mvn exec:exec -Dexec.args="-b /path/to/backup -o /path/to/output -v"
+mvn exec:exec -Dexec.args="-b /path/to/backup -r -l /tmp/debug.log -v"
 ```
 
 ### Clean build:

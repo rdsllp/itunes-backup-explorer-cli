@@ -1,6 +1,7 @@
 package hearsay.idevice_decryption;
 
 import hearsay.idevice_decryption.api.*;
+import hearsay.idevice_decryption.util.DualLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,13 +26,15 @@ public class ITunesBackupDecryptor {
   private static final Logger logger = LoggerFactory.getLogger(ITunesBackupDecryptor.class);
 
   private final boolean verbose;
+  private final DualLogger dualLogger;
   private final AtomicInteger processedFiles = new AtomicInteger(0);
   private final AtomicInteger skippedFiles = new AtomicInteger(0);
   private final AtomicInteger errorFiles = new AtomicInteger(0);
   private final AtomicLong totalBytes = new AtomicLong(0);
 
-  public ITunesBackupDecryptor(boolean verbose) {
+  public ITunesBackupDecryptor(boolean verbose, String logFilePath) throws IOException {
     this.verbose = verbose;
+    this.dualLogger = new DualLogger(logFilePath);
   }
 
   public static void main(String[] args) {
@@ -62,9 +65,17 @@ public class ITunesBackupDecryptor {
         System.exit(1);
       }
 
-      ITunesBackupDecryptor decryptor = new ITunesBackupDecryptor(arguments.verbose);
-      decryptor.decryptBackup(arguments.backupPath, arguments.outputPath, arguments.password, arguments.force,
-          arguments.replace);
+      ITunesBackupDecryptor decryptor = null;
+      try {
+        decryptor = new ITunesBackupDecryptor(arguments.verbose, arguments.logFilePath);
+        decryptor.decryptBackup(arguments.backupPath, arguments.outputPath, arguments.password, arguments.force,
+            arguments.replace);
+      } finally {
+        // Close the log file if decryptor was created
+        if (decryptor != null) {
+          decryptor.dualLogger.close();
+        }
+      }
 
     } catch (IllegalArgumentException e) {
       System.err.println("Error: " + e.getMessage());
@@ -81,6 +92,7 @@ public class ITunesBackupDecryptor {
     String backupPath;
     String outputPath;
     String password;
+    String logFilePath;
     boolean verbose = false;
     boolean force = false;
     boolean help = false;
@@ -111,6 +123,12 @@ public class ITunesBackupDecryptor {
           if (i + 1 >= args.length)
             throw new IllegalArgumentException("Missing value for " + arg);
           arguments.password = args[++i];
+          break;
+        case "-l":
+        case "--log":
+          if (i + 1 >= args.length)
+            throw new IllegalArgumentException("Missing value for " + arg);
+          arguments.logFilePath = args[++i];
           break;
         case "-v":
         case "--verbose":
@@ -147,6 +165,7 @@ public class ITunesBackupDecryptor {
     System.out.println("  -o, --output PATH      Output directory for decrypted files");
     System.out.println("  -r, --replace          Replace encrypted files in-place with decrypted versions");
     System.out.println("  -p, --password PASS    Backup password (will prompt if not provided)");
+    System.out.println("  -l, --log PATH         Write logs to specified file (overwrites if exists)");
     System.out.println("  -v, --verbose          Enable verbose output");
     System.out.println(
         "  -f, --force            Overwrite existing files (in output mode) or skip confirmation (in replace mode)");
@@ -180,6 +199,14 @@ public class ITunesBackupDecryptor {
 
   public void decryptBackup(String backupPath, String outputPath, String password, boolean force, boolean replace)
       throws Exception {
+
+    log("Starting iTunes backup decryption...");
+    log("Backup path: " + backupPath);
+    if (replace) {
+      log("Mode: In-place replacement");
+    } else {
+      log("Mode: Extract to output directory: " + outputPath);
+    }
 
     File backupDir = new File(backupPath);
     if (!backupDir.exists() || !backupDir.isDirectory()) {
@@ -344,7 +371,7 @@ public class ITunesBackupDecryptor {
       errorFiles.incrementAndGet();
       String errorMsg = "Error processing " + file.fileID + " (" + file.domain + "/" + file.relativePath + "): "
           + e.getMessage();
-      log("ERROR: " + errorMsg);
+      dualLogger.error(errorMsg);
       if (verbose) {
         logger.error("Full error details:", e);
       }
@@ -369,7 +396,8 @@ public class ITunesBackupDecryptor {
       File originalFile = file.getContentFile();
       if (originalFile == null || !originalFile.exists()) {
         errorFiles.incrementAndGet();
-        log("ERROR: Content file not found for " + file.fileID + " (" + file.domain + "/" + file.relativePath + ")");
+        dualLogger
+            .error("Content file not found for " + file.fileID + " (" + file.domain + "/" + file.relativePath + ")");
         return;
       }
 
@@ -472,7 +500,7 @@ public class ITunesBackupDecryptor {
       String errorMsg = "Error processing in-place " + file.fileID + " (" + file.domain + "/" + file.relativePath
           + "): "
           + e.getMessage();
-      log("ERROR: " + errorMsg);
+      dualLogger.error(errorMsg);
       if (verbose) {
         logger.error("Full error details:", e);
       }
@@ -519,13 +547,11 @@ public class ITunesBackupDecryptor {
   }
 
   private void log(String message) {
-    System.out.println(message);
+    dualLogger.info(message);
   }
 
   private void logVerbose(String message) {
-    if (verbose) {
-      System.out.println(message);
-    }
+    dualLogger.verbose(message, verbose);
   }
 
   private static String formatBytes(long bytes) {
