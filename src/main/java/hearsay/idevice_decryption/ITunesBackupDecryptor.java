@@ -43,14 +43,28 @@ public class ITunesBackupDecryptor {
         System.exit(0);
       }
 
-      if (arguments.backupPath == null || arguments.outputPath == null) {
-        System.err.println("Error: Both backup path and output path are required.");
+      // Validate arguments
+      if (arguments.backupPath == null) {
+        System.err.println("Error: Backup path is required.");
+        printHelp();
+        System.exit(1);
+      }
+
+      if (arguments.replace && arguments.outputPath != null) {
+        System.err.println("Error: Cannot use both --output and --replace options together.");
+        printHelp();
+        System.exit(1);
+      }
+
+      if (!arguments.replace && arguments.outputPath == null) {
+        System.err.println("Error: Either --output or --replace option is required.");
         printHelp();
         System.exit(1);
       }
 
       ITunesBackupDecryptor decryptor = new ITunesBackupDecryptor(arguments.verbose);
-      decryptor.decryptBackup(arguments.backupPath, arguments.outputPath, arguments.password, arguments.force);
+      decryptor.decryptBackup(arguments.backupPath, arguments.outputPath, arguments.password, arguments.force,
+          arguments.replace);
 
     } catch (IllegalArgumentException e) {
       System.err.println("Error: " + e.getMessage());
@@ -70,6 +84,7 @@ public class ITunesBackupDecryptor {
     boolean verbose = false;
     boolean force = false;
     boolean help = false;
+    boolean replace = false;
   }
 
   private static Arguments parseArguments(String[] args) {
@@ -105,6 +120,10 @@ public class ITunesBackupDecryptor {
         case "--force":
           arguments.force = true;
           break;
+        case "-r":
+        case "--replace":
+          arguments.replace = true;
+          break;
         case "-h":
         case "--help":
           arguments.help = true;
@@ -125,18 +144,27 @@ public class ITunesBackupDecryptor {
     System.out.println();
     System.out.println("Options:");
     System.out.println("  -b, --backup PATH      Path to iTunes backup directory (required)");
-    System.out.println("  -o, --output PATH      Output directory for decrypted files (required)");
+    System.out.println("  -o, --output PATH      Output directory for decrypted files");
+    System.out.println("  -r, --replace          Replace encrypted files in-place with decrypted versions");
     System.out.println("  -p, --password PASS    Backup password (will prompt if not provided)");
     System.out.println("  -v, --verbose          Enable verbose output");
-    System.out.println("  -f, --force            Overwrite existing files in output directory");
+    System.out.println(
+        "  -f, --force            Overwrite existing files (in output mode) or skip confirmation (in replace mode)");
     System.out.println("  -h, --help             Show this help message");
     System.out.println();
+    System.out.println("Note: Either --output or --replace is required, but not both.");
+    System.out.println();
     System.out.println("Examples:");
+    System.out.println("  # Extract to separate directory (preserves original backup)");
     System.out.println("  java -jar itunes-backup-decryptor.jar -b /path/to/backup -o /path/to/output");
     System.out
         .println("  java -jar itunes-backup-decryptor.jar -b /path/to/backup -o /path/to/output -p mypassword -v");
     System.out.println();
-    System.out.println("The tool preserves the original backup directory structure with decrypted files:");
+    System.out.println("  # Replace encrypted files in-place (modifies original backup)");
+    System.out.println("  java -jar itunes-backup-decryptor.jar -b /path/to/backup -r");
+    System.out.println("  java -jar itunes-backup-decryptor.jar -b /path/to/backup -r -p mypassword -v");
+    System.out.println();
+    System.out.println("Output mode preserves the original backup directory structure with decrypted files:");
     System.out.println("  output/");
     System.out.println("    ├── Manifest.db       (database with file mappings)");
     System.out.println("    ├── Manifest.plist    (backup metadata)");
@@ -146,9 +174,11 @@ public class ITunesBackupDecryptor {
     System.out.println("    ├── cd/");
     System.out.println("    │   └── cd789abc...    (decrypted files)");
     System.out.println("    └── ...");
+    System.out.println();
+    System.out.println("Replace mode decrypts files directly in the backup directory, preserving the exact structure.");
   }
 
-  public void decryptBackup(String backupPath, String outputPath, String password, boolean force)
+  public void decryptBackup(String backupPath, String outputPath, String password, boolean force, boolean replace)
       throws Exception {
 
     File backupDir = new File(backupPath);
@@ -156,14 +186,28 @@ public class ITunesBackupDecryptor {
       throw new IllegalArgumentException("Backup directory does not exist: " + backupPath);
     }
 
-    Path outputDir = Paths.get(outputPath);
-    if (!Files.exists(outputDir)) {
-      Files.createDirectories(outputDir);
-      log("Created output directory: " + outputPath);
-    } else if (!force) {
-      File[] files = outputDir.toFile().listFiles();
-      if (files != null && files.length > 0) {
-        throw new IllegalArgumentException("Output directory is not empty. Use --force to overwrite existing files.");
+    Path outputDir = null;
+    if (!replace) {
+      outputDir = Paths.get(outputPath);
+      if (!Files.exists(outputDir)) {
+        Files.createDirectories(outputDir);
+        log("Created output directory: " + outputPath);
+      } else if (!force) {
+        File[] files = outputDir.toFile().listFiles();
+        if (files != null && files.length > 0) {
+          throw new IllegalArgumentException("Output directory is not empty. Use --force to overwrite existing files.");
+        }
+      }
+    } else {
+      log("Replace mode: Files will be decrypted in-place in the backup directory");
+      if (!force) {
+        log("WARNING: This will modify the original backup files. Use --force to skip this warning in the future.");
+        System.out.print("Continue? (y/N): ");
+        String response = System.console() != null ? System.console().readLine() : "n";
+        if (!response.toLowerCase().startsWith("y")) {
+          log("Operation cancelled by user.");
+          return;
+        }
       }
     }
 
@@ -203,16 +247,27 @@ public class ITunesBackupDecryptor {
 
     log("Found " + allFiles.size() + " files to process");
     log("Starting decryption process...");
-    log("Output structure will preserve original backup format with decrypted files");
+
+    if (replace) {
+      log("Replace mode: Decrypting files in-place");
+    } else {
+      log("Output structure will preserve original backup format with decrypted files");
+    }
 
     long startTime = System.currentTimeMillis();
 
-    // Copy manifest files to preserve backup structure
-    copyManifestFiles(backup, outputDir);
+    if (!replace) {
+      // Copy manifest files to preserve backup structure (only in output mode)
+      copyManifestFiles(backup, outputDir);
+    }
 
     // Process all files
     for (BackupFile file : allFiles) {
-      processFile(file, outputDir, force);
+      if (replace) {
+        processFileInPlace(file, force);
+      } else {
+        processFile(file, outputDir, force);
+      }
 
       // Progress reporting every 100 files
       if (processedFiles.get() % 100 == 0) {
@@ -228,12 +283,19 @@ public class ITunesBackupDecryptor {
     log("\n=== DECRYPTION COMPLETE ===");
     log("Total files: " + allFiles.size());
     log("Successfully processed: " + processedFiles.get());
-    log("Skipped (already exist): " + skippedFiles.get());
+    log("Skipped (already exist or not encrypted): " + skippedFiles.get());
     log("Errors: " + errorFiles.get());
     log("Total data processed: " + formatBytes(totalBytes.get()));
     log("Time taken: " + formatDuration(duration));
-    log("Output directory: " + outputPath);
-    log("Structure: Preserved original backup format with decrypted files");
+
+    if (replace) {
+      log("Mode: In-place replacement in backup directory");
+      log("Location: " + backupPath);
+    } else {
+      log("Mode: Extract to separate directory");
+      log("Output directory: " + outputPath);
+      log("Structure: Preserved original backup format with decrypted files");
+    }
 
     if (errorFiles.get() > 0) {
       log("Warning: " + errorFiles.get() + " files had errors during processing");
@@ -268,13 +330,147 @@ public class ITunesBackupDecryptor {
       processedFiles.incrementAndGet();
       totalBytes.addAndGet(file.getSize());
 
-      logVerbose("Extracted: " + fileIdPrefix + "/" + file.fileID + " (" + file.domain + "/" + file.relativePath +
-          ", " + formatBytes(file.getSize()) +
-          (file.isEncrypted() ? ", encrypted" : "") + ")");
+      if (file.getSize() == 0) {
+        logVerbose("Extracted (0-byte file): " + fileIdPrefix + "/" + file.fileID + " (" + file.domain + "/"
+            + file.relativePath +
+            (file.isEncrypted() ? ", was encrypted" : "") + ")");
+      } else {
+        logVerbose("Extracted: " + fileIdPrefix + "/" + file.fileID + " (" + file.domain + "/" + file.relativePath +
+            ", " + formatBytes(file.getSize()) +
+            (file.isEncrypted() ? ", encrypted" : "") + ")");
+      }
 
     } catch (Exception e) {
       errorFiles.incrementAndGet();
       String errorMsg = "Error processing " + file.fileID + " (" + file.domain + "/" + file.relativePath + "): "
+          + e.getMessage();
+      log("ERROR: " + errorMsg);
+      if (verbose) {
+        logger.error("Full error details:", e);
+      }
+    }
+  }
+
+  private void processFileInPlace(BackupFile file, boolean force) {
+    try {
+      // Skip directories
+      if (file.getFileType() == BackupFile.FileType.DIRECTORY) {
+        return;
+      }
+
+      // Skip files that are not encrypted (no need to decrypt)
+      if (!file.isEncrypted()) {
+        skippedFiles.incrementAndGet();
+        logVerbose("Skipped (not encrypted): " + file.fileID + " (" + file.domain + "/" + file.relativePath + ")");
+        return;
+      }
+
+      // Get the original file path
+      File originalFile = file.getContentFile();
+      if (originalFile == null || !originalFile.exists()) {
+        errorFiles.incrementAndGet();
+        log("ERROR: Content file not found for " + file.fileID + " (" + file.domain + "/" + file.relativePath + ")");
+        return;
+      }
+
+      // Create temporary file in the same directory for atomic replacement
+      File tempFile = new File(originalFile.getParent(), originalFile.getName() + ".tmp." + System.currentTimeMillis());
+
+      try {
+        // Check if parent directory is writable
+        File parentDir = originalFile.getParentFile();
+        if (!parentDir.canWrite()) {
+          throw new IOException("Cannot write to directory: " + parentDir.getAbsolutePath() + " (permission denied)");
+        }
+
+        // Decrypt to temporary file
+        logVerbose("Decrypting to temp file: " + tempFile.getAbsolutePath() +
+            " (original: " + originalFile.getAbsolutePath() + ", size: " + file.getSize() + " bytes)");
+
+        file.extract(tempFile);
+
+        // Verify the temporary file was created and has content
+        if (!tempFile.exists()) {
+          throw new IOException("Temporary decrypted file was not created at: " + tempFile.getAbsolutePath());
+        }
+
+        if (tempFile.length() == 0 && file.getSize() > 0) {
+          throw new IOException("Temporary decrypted file is empty: " + tempFile.getAbsolutePath() +
+              " (original size: " + file.getSize() + " bytes, encrypted: " + file.isEncrypted() + ")");
+        }
+
+        // Atomic replacement: rename temp file to original file name
+        if (!tempFile.renameTo(originalFile)) {
+          // If rename fails, try copy and delete (less atomic but still works)
+          Files.copy(tempFile.toPath(), originalFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+          if (!tempFile.delete()) {
+            log("Warning: Could not delete temporary file: " + tempFile.getAbsolutePath());
+          }
+        }
+
+        processedFiles.incrementAndGet();
+        totalBytes.addAndGet(file.getSize());
+
+        if (file.getSize() == 0) {
+          logVerbose("Replaced in-place (0-byte file): " + file.fileID + " (" + file.domain + "/" + file.relativePath
+              + ", was encrypted)");
+        } else {
+          logVerbose("Replaced in-place: " + file.fileID + " (" + file.domain + "/" + file.relativePath +
+              ", " + formatBytes(file.getSize()) + ", was encrypted)");
+        }
+
+      } catch (Exception e) {
+        // Clean up temp file on error
+        if (tempFile.exists()) {
+          if (!tempFile.delete()) {
+            log("Warning: Could not delete temporary file after error: " + tempFile.getAbsolutePath());
+          }
+        }
+
+        // If the error was about temp file creation/emptiness, try alternative approach
+        if (e.getMessage() != null && e.getMessage().contains("Temporary decrypted file")) {
+          logVerbose("Attempting alternative approach: extract to system temp directory first");
+          try {
+            // Create temp file in system temp directory instead
+            File systemTempFile = File.createTempFile("backup_decrypt_", ".tmp");
+            try {
+              file.extract(systemTempFile);
+
+              if (systemTempFile.exists() && (systemTempFile.length() > 0 || file.getSize() == 0)) {
+                // Successfully extracted to system temp, now move to original location
+                Files.copy(systemTempFile.toPath(), originalFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+                processedFiles.incrementAndGet();
+                totalBytes.addAndGet(file.getSize());
+
+                if (file.getSize() == 0) {
+                  logVerbose("Replaced in-place (via system temp, 0-byte file): " + file.fileID + " (" + file.domain
+                      + "/" + file.relativePath + ", was encrypted)");
+                } else {
+                  logVerbose("Replaced in-place (via system temp): " + file.fileID + " (" + file.domain + "/"
+                      + file.relativePath +
+                      ", " + formatBytes(file.getSize()) + ", was encrypted)");
+                }
+
+                return; // Success, exit method
+              }
+            } finally {
+              if (systemTempFile.exists()) {
+                systemTempFile.delete();
+              }
+            }
+          } catch (Exception altException) {
+            logVerbose("Alternative approach also failed: " + altException.getMessage());
+          }
+        }
+
+        throw e; // Re-throw original exception if alternative approach didn't work
+      }
+
+    } catch (Exception e) {
+      errorFiles.incrementAndGet();
+      String errorMsg = "Error processing in-place " + file.fileID + " (" + file.domain + "/" + file.relativePath
+          + "): "
           + e.getMessage();
       log("ERROR: " + errorMsg);
       if (verbose) {
