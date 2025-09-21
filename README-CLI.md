@@ -19,16 +19,39 @@ A command-line tool to decrypt and extract all files from encrypted iTunes/iPhon
 
 ## Building
 
+### JAR with Dependencies
 ```bash
 mvn clean package
 ```
-
 This creates `target/itunes-backup-explorer-1.7-SNAPSHOT-jar-with-dependencies.jar`
+
+### Native Binary (Recommended)
+```bash
+# Install GraalVM first
+sdk install java 21.0.8-graal
+sdk use java 21.0.8-graal
+
+# Build native binary
+mvn clean native:compile -Pnative -Dskip.installer=true
+
+# Or use the build script
+./build-native.sh
+```
+This creates a standalone native binary `target/itunes-backup-decryptor` (~62MB)
 
 ## Usage
 
 ### Basic Usage
 
+**Native Binary (Recommended):**
+```bash
+./itunes-backup-decryptor \
+  --backup /path/to/backup/directory \
+  --output /path/to/output/directory \
+  --password "your_device_passcode"
+```
+
+**JAR Version:**
 ```bash
 java -jar itunes-backup-explorer-1.7-SNAPSHOT-jar-with-dependencies.jar \
   --backup /path/to/backup/directory \

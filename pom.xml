@@ -5,9 +5,11 @@
   <version>1.7-SNAPSHOT</version>
   <properties>
     <app.version>1.7</app.version>
-    <maven.compiler.release>18</maven.compiler.release>
+    <maven.compiler.release>21</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <exec.maven.plugin.version>3.3.0</exec.maven.plugin.version>
+    <graalvm.version>24.1.1</graalvm.version>
+    <native.maven.plugin.version>0.10.4</native.maven.plugin.version>
   </properties>
   <repositories>
     <repository>
@@ -84,6 +86,9 @@
         <os>
           <family>mac</family>
         </os>
+        <property>
+          <name>!skip.installer</name>
+        </property>
       </activation>
       <build>
         <plugins>
@@ -145,6 +150,48 @@
                 </configuration>
               </execution>
             </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <!-- Native Image Profile -->
+    <profile>
+      <id>native</id>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>${native.maven.plugin.version}</version>
+            <extensions>true</extensions>
+            <executions>
+              <execution>
+                <id>build-native</id>
+                <goals>
+                  <goal>compile-no-fork</goal>
+                </goals>
+                <phase>package</phase>
+              </execution>
+            </executions>
+            <configuration>
+              <imageName>itunes-backup-decryptor</imageName>
+              <mainClass>me.maxih.itunes_backup_explorer.ITunesBackupDecryptor</mainClass>
+              <buildArgs>
+                <buildArg>--no-fallback</buildArg>
+                <buildArg>--report-unsupported-elements-at-runtime</buildArg>
+                <buildArg>-H:+ReportExceptionStackTraces</buildArg>
+                <buildArg>-H:+UnlockExperimentalVMOptions</buildArg>
+                <buildArg>-H:IncludeResources=.*\.properties$</buildArg>
+                <buildArg>-H:IncludeResources=.*\.xml$</buildArg>
+                <buildArg>-H:IncludeResources=.*\.txt$</buildArg>
+                <!-- Initialize at runtime -->
+                <buildArg>--initialize-at-run-time=java.sql.DriverManager</buildArg>
+                <!-- Initialize at build time -->
+                <buildArg>--initialize-at-build-time=org.bouncycastle</buildArg>
+                <buildArg>--initialize-at-build-time=org.slf4j</buildArg>
+              </buildArgs>
+            </configuration>
           </plugin>
         </plugins>
       </build>

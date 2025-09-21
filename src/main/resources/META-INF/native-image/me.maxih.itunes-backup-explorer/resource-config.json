@@ -1,0 +1,30 @@
+{
+  "resources": {
+    "includes": [
+      {
+        "pattern": "\\Qorg/sqlite/native/\\E.*"
+      },
+      {
+        "pattern": "\\Qorg/slf4j/\\E.*"
+      },
+      {
+        "pattern": ".*\\.properties$"
+      },
+      {
+        "pattern": ".*\\.xml$"
+      },
+      {
+        "pattern": ".*\\.txt$"
+      }
+    ]
+  },
+  "bundles": [
+    {
+      "name": "org.slf4j.impl.SimpleLogger",
+      "locales": [
+        "en"
+      ]
+    }
+  ]
+}
+
